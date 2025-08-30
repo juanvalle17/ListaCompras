@@ -1,0 +1,14 @@
+CREATE TABLE Listas (
+    id INT IDENTITY PRIMARY KEY,
+    nombre NVARCHAR(255) NOT NULL,
+    fecha_creacion DATETIME DEFAULT GETDATE()
+);
+
+CREATE TABLE Items (
+    id INT IDENTITY PRIMARY KEY,
+    lista_id INT NOT NULL FOREIGN KEY REFERENCES Listas(id),
+    nombre NVARCHAR(255) NOT NULL,
+    cantidad INT NOT NULL,
+    categoria NVARCHAR(100),
+    prioridad INT
+);

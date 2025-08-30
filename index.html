@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop List Genie - Generador de Listas de Compras</title>
+    <meta name="description" content="Crea y organiza tus listas de compras de forma inteligente. Establece prioridades, categoriza productos y optimiza tus compras.">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="header-title">
+                    <div class="header-icon">🛒</div>
+                    <div>
+                        <h1>Shop List Genie</h1>
+                        <p>Organiza tus compras de manera inteligente</p>
+                    </div>
+                </div>
+                
+                <div class="nav-buttons">
+                    <button class="nav-btn active" onclick="showSection('form')" id="btn-form">
+                        ➕ Nueva Lista
+                    </button>
+                    <button class="nav-btn" onclick="showSection('lists')" id="btn-lists">
+                        📋 Mis Listas (<span id="lists-count">0</span>)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Nueva Lista Section -->
+            <section id="form-section" class="section active">
+                <div class="section-title">
+                    <h2>Crear Nueva Lista</h2>
+                    <p>Agrega productos, establece prioridades y organiza por categorías</p>
+                </div>
+
+                <div style="max-width: 800px; margin: 0 auto;">
+                    <!-- Formulario Principal -->
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-icon">🛒</span>
+                            <h3>Nueva Lista de Compras</h3>
+                        </div>
+                        
+                        <form id="list-form">
+                            <div class="form-group">
+                                <label for="list-name">Nombre de la Lista</label>
+                                <input type="text" id="list-name" 
+                                       placeholder="Ej: Compras del supermercado" 
+                                       pattern="[a-zA-Z0-9\s]{3,50}"
+                                       title="3-50 caracteres, solo letras, números y espacios"
+                                       minlength="3" maxlength="50" required>
+                                <small class="form-help">Mínimo 3, máximo 50 caracteres</small>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="item-name">Nombre del Producto</label>
+                                    <input type="text" id="item-name" 
+                                           placeholder="Ej: Leche"
+                                           pattern="[a-zA-Z0-9\s]{2,100}"
+                                           title="2-100 caracteres, solo letras, números y espacios"
+                                           minlength="2" maxlength="100" required>
+                                    <small class="form-help">Mínimo 2, máximo 100 caracteres</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="item-quantity">Cantidad</label>
+                                    <input type="number" id="item-quantity" 
+                                           min="1" max="999" value="1" required
+                                           title="Cantidad entre 1 y 999">
+                                    <small class="form-help">Entre 1 y 999</small>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="item-category">Categoría</label>
+                                    <select id="item-category" required title="Debe seleccionar una categoría">
+                                        <option value="">Selecciona una categoría</option>
+                                        <option value="Alimentos">🥬 Alimentos</option>
+                                        <option value="Hogar">🏠 Hogar</option>
+                                        <option value="Higiene Personal">🧴 Higiene Personal</option>
+                                        <option value="Limpieza">🧽 Limpieza</option>
+                                        <option value="Ropa">👕 Ropa</option>
+                                        <option value="Electrónicos">📱 Electrónicos</option>
+                                        <option value="Medicamentos">💊 Medicamentos</option>
+                                        <option value="Mascotas">🐕 Mascotas</option>
+                                        <option value="Otros">📦 Otros</option>
+                                    </select>
+                                    <small class="form-help">Selecciona una categoría obligatoria</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="item-priority">Prioridad: <span id="priority-text">Media (5)</span></label>
+                                    <div class="slider-container">
+                                        <input type="range" id="item-priority" class="slider" 
+                                               min="1" max="10" value="5" step="1" required
+                                               title="Prioridad entre 1 (baja) y 10 (alta)">
+                                        <div class="priority-display">
+                                            <span>Baja (1)</span>
+                                            <span>Alta (10)</span>
+                                        </div>
+                                    </div>
+                                    <small class="form-help">Desliza para establecer la prioridad</small>
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn btn-primary btn-full" onclick="addItem()" id="add-item-btn">
+                                ➕ Agregar Producto
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Lista de Items Agregados -->
+                    <div class="card" id="items-card" style="display: none;">
+                        <div class="card-header">
+                            <span class="card-icon">📦</span>
+                            <h3>Productos Agregados (<span id="items-count">0</span>)</h3>
+                        </div>
+                        
+                        <div class="items-list" id="items-list"></div>
+                        
+                        <button type="button" class="btn btn-primary btn-full" onclick="createList()" id="create-list-btn">
+                            ✅ Crear Lista de Compras
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Mis Listas Section -->
+            <section id="lists-section" class="section">
+                <div class="section-title">
+                    <h2>Mis Listas de Compras</h2>
+                    <p>Revisa y administra todas tus listas de compras</p>
+                </div>
+
+                <div class="filter-section">
+                    <label>🔍 Filtrar por categoría:</label>
+                    <select id="category-filter" onchange="filterLists()">
+                        <option value="Todos">Todos</option>
+                        <option value="Alimentos">🥬 Alimentos</option>
+                        <option value="Hogar">🏠 Hogar</option>
+                        <option value="Higiene Personal">🧴 Higiene Personal</option>
+                        <option value="Limpieza">🧽 Limpieza</option>
+                        <option value="Ropa">👕 Ropa</option>
+                        <option value="Electrónicos">📱 Electrónicos</option>
+                        <option value="Medicamentos">💊 Medicamentos</option>
+                        <option value="Mascotas">🐕 Mascotas</option>
+                        <option value="Otros">📦 Otros</option>
+                    </select>
+                </div>
+
+                <div id="lists-container">
+                    <div class="empty-state">
+                        <div class="icon">📦</div>
+                        <h3>No hay listas de compras</h3>
+                        <p>Crea tu primera lista de compras para comenzar</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toast" class="toast">
+        <div class="toast-title" id="toast-title"></div>
+        <div class="toast-message" id="toast-message"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
+    <script src="config.js"></script>
+    <script src="validations.js"></script>
+    <script src="api-service.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
