@@ -178,6 +178,77 @@
     <script src="config.js"></script>
     <script src="validations.js"></script>
     <script src="api-service.js"></script>
-    <script src="main.js"></script>
+    
+    <!-- Script de verificación de autenticación -->
+    <script>
+        // Verificar autenticación antes de cargar la aplicación
+        async function checkAuthentication() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/me`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    // No está autenticado, redirigir al login
+                    window.location.href = 'login.html';
+                    return false;
+                }
+                
+                const userData = await response.json();
+                
+                // Mostrar información del usuario en el header
+                const headerTitle = document.querySelector('.header-title div');
+                if (headerTitle) {
+                    const userInfo = document.createElement('div');
+                    userInfo.style.fontSize = '0.9rem';
+                    userInfo.style.opacity = '0.8';
+                    userInfo.textContent = `Bienvenido, ${userData.nombre_completo}`;
+                    headerTitle.appendChild(userInfo);
+                }
+                
+                // Agregar botón de logout
+                const navButtons = document.querySelector('.nav-buttons');
+                if (navButtons) {
+                    const logoutBtn = document.createElement('button');
+                    logoutBtn.className = 'nav-btn';
+                    logoutBtn.innerHTML = '🚪 Cerrar Sesión';
+                    logoutBtn.onclick = logout;
+                    navButtons.appendChild(logoutBtn);
+                }
+                
+                return true;
+            } catch (error) {
+                console.error('Error verificando autenticación:', error);
+                window.location.href = 'login.html';
+                return false;
+            }
+        }
+        
+        // Función para cerrar sesión
+        async function logout() {
+            try {
+                await fetch(`${API_BASE_URL}/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+            } catch (error) {
+                console.error('Error al cerrar sesión:', error);
+            } finally {
+                window.location.href = 'login.html';
+            }
+        }
+        
+        // Verificar autenticación al cargar la página
+        document.addEventListener('DOMContentLoaded', async () => {
+            const isAuthenticated = await checkAuthentication();
+            if (isAuthenticated) {
+                // Solo cargar main.js si está autenticado
+                const script = document.createElement('script');
+                script.src = 'main.js';
+                document.body.appendChild(script);
+            }
+        });
+    </script>
 </body>
 </html>

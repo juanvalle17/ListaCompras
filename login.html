@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Shop List Genie</title>
+    <meta name="description" content="Inicia sesión en Shop List Genie para acceder a tus listas de compras.">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        
+        .login-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(34, 197, 94, 0.1);
+            padding: 3rem;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .login-header {
+            margin-bottom: 2rem;
+        }
+        
+        .login-icon {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin: 0 auto 1rem;
+        }
+        
+        .login-title {
+            color: #2d4a32;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .login-subtitle {
+            color: #6b7280;
+            font-size: 1rem;
+        }
+        
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .form-group {
+            text-align: left;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #2d4a32;
+            font-weight: 600;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #22c55e;
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+        }
+        
+        .form-group .help-text {
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            color: #6b7280;
+        }
+        
+        .form-group .help-text.error {
+            color: #ef4444;
+        }
+        
+        .login-btn {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.3);
+        }
+        
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .register-link {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+        }
+        
+        .register-link a {
+            color: #22c55e;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+        
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .success-message {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #16a34a;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-icon">🛒</div>
+                <h1 class="login-title">Shop List Genie</h1>
+                <p class="login-subtitle">Inicia sesión para acceder a tus listas</p>
+            </div>
+            
+            <div id="error-message" class="error-message" style="display: none;"></div>
+            <div id="success-message" class="success-message" style="display: none;"></div>
+            
+            <form class="login-form" id="loginForm">
+                <div class="form-group">
+                    <label for="username">Usuario</label>
+                    <input type="text" id="username" name="username" required>
+                    <div class="help-text" id="username-help">Ingresa tu nombre de usuario</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" name="password" required>
+                    <div class="help-text" id="password-help">Ingresa tu contraseña</div>
+                </div>
+                
+                <button type="submit" class="login-btn" id="loginBtn">
+                    Iniciar Sesión
+                </button>
+            </form>
+            
+            <div class="register-link">
+                <p>¿No tienes cuenta? <a href="#" id="registerLink">Regístrate aquí</a></p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Registro -->
+    <div id="registerModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div class="login-card" style="margin: 0;">
+            <div class="login-header">
+                <div class="login-icon">👤</div>
+                <h1 class="login-title">Crear Cuenta</h1>
+                <p class="login-subtitle">Regístrate para comenzar a usar Shop List Genie</p>
+            </div>
+            
+            <div id="register-error-message" class="error-message" style="display: none;"></div>
+            <div id="register-success-message" class="success-message" style="display: none;"></div>
+            
+            <form class="login-form" id="registerForm">
+                <div class="form-group">
+                    <label for="reg-username">Usuario</label>
+                    <input type="text" id="reg-username" name="username" required>
+                    <div class="help-text" id="reg-username-help">3-20 caracteres, solo letras, números y guiones bajos</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="reg-email">Email</label>
+                    <input type="email" id="reg-email" name="email" required>
+                    <div class="help-text" id="reg-email-help">Ingresa un email válido</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="reg-nombre">Nombre Completo</label>
+                    <input type="text" id="reg-nombre" name="nombre_completo" required>
+                    <div class="help-text" id="reg-nombre-help">Tu nombre completo</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="reg-password">Contraseña</label>
+                    <input type="password" id="reg-password" name="password" required>
+                    <div class="help-text" id="reg-password-help">Mínimo 6 caracteres</div>
+                </div>
+                
+                <button type="submit" class="login-btn" id="registerBtn">
+                    Crear Cuenta
+                </button>
+                
+                <button type="button" class="login-btn" id="cancelRegisterBtn" style="background: #6b7280; margin-top: 0.5rem;">
+                    Cancelar
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <script src="validations.js"></script>
+    <script>
+        const API_BASE_URL = 'http://localhost:5000';
+        
+        // Elementos del DOM
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const registerModal = document.getElementById('registerModal');
+        const registerLink = document.getElementById('registerLink');
+        const cancelRegisterBtn = document.getElementById('cancelRegisterBtn');
+        
+        // Mostrar/ocultar modal de registro
+        registerLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            registerModal.style.display = 'flex';
+        });
+        
+        cancelRegisterBtn.addEventListener('click', () => {
+            registerModal.style.display = 'none';
+            clearForm('registerForm');
+        });
+        
+        // Función para limpiar formularios
+        function clearForm(formId) {
+            document.getElementById(formId).reset();
+            // Limpiar mensajes de error
+            document.querySelectorAll('.help-text').forEach(el => {
+                el.className = 'help-text';
+                el.textContent = el.textContent.replace(/Error: .+/, '');
+            });
+        }
+        
+        // Función para mostrar mensajes
+        function showMessage(elementId, message, isError = true) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.style.display = 'block';
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Validación en tiempo real para login
+        document.getElementById('username').addEventListener('blur', function() {
+            const value = this.value.trim();
+            const helpElement = document.getElementById('username-help');
+            
+            if (value && !Validations.PATTERNS.USERNAME.test(value)) {
+                helpElement.className = 'help-text error';
+                helpElement.textContent = Validations.ERROR_MESSAGES.USERNAME;
+            } else {
+                helpElement.className = 'help-text';
+                helpElement.textContent = 'Ingresa tu nombre de usuario';
+            }
+        });
+        
+        document.getElementById('password').addEventListener('blur', function() {
+            const value = this.value;
+            const helpElement = document.getElementById('password-help');
+            
+            if (value && !Validations.PATTERNS.PASSWORD.test(value)) {
+                helpElement.className = 'help-text error';
+                helpElement.textContent = Validations.ERROR_MESSAGES.PASSWORD;
+            } else {
+                helpElement.className = 'help-text';
+                helpElement.textContent = 'Ingresa tu contraseña';
+            }
+        });
+        
+        // Validación en tiempo real para registro
+        ['reg-username', 'reg-email', 'reg-nombre', 'reg-password'].forEach(fieldId => {
+            document.getElementById(fieldId).addEventListener('blur', function() {
+                const value = this.value.trim();
+                const helpElement = document.getElementById(fieldId + '-help');
+                const fieldName = fieldId.replace('reg-', '').replace('-', '_').toUpperCase();
+                
+                if (fieldName === 'NOMBRE') fieldName = 'NOMBRE_COMPLETO';
+                
+                if (value && Validations.PATTERNS[fieldName] && !Validations.PATTERNS[fieldName].test(value)) {
+                    helpElement.className = 'help-text error';
+                    helpElement.textContent = Validations.ERROR_MESSAGES[fieldName];
+                } else {
+                    helpElement.className = 'help-text';
+                    const defaultMessages = {
+                        'reg-username-help': '3-20 caracteres, solo letras, números y guiones bajos',
+                        'reg-email-help': 'Ingresa un email válido',
+                        'reg-nombre-help': 'Tu nombre completo',
+                        'reg-password-help': 'Mínimo 6 caracteres'
+                    };
+                    helpElement.textContent = defaultMessages[fieldId + '-help'];
+                }
+            });
+        });
+        
+        // Manejar login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(loginForm);
+            const data = {
+                username: formData.get('username'),
+                password: formData.get('password')
+            };
+            
+            try {
+                document.getElementById('loginBtn').disabled = true;
+                
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage('success-message', 'Login exitoso. Redirigiendo...', false);
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
+                } else {
+                    showMessage('error-message', result.error || 'Error en el login');
+                }
+            } catch (error) {
+                showMessage('error-message', 'Error de conexión. Intenta nuevamente.');
+            } finally {
+                document.getElementById('loginBtn').disabled = false;
+            }
+        });
+        
+        // Manejar registro
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(registerForm);
+            const data = {
+                username: formData.get('username'),
+                email: formData.get('email'),
+                nombre_completo: formData.get('nombre_completo'),
+                password: formData.get('password')
+            };
+            
+            try {
+                document.getElementById('registerBtn').disabled = true;
+                
+                const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage('register-success-message', 'Cuenta creada exitosamente. Puedes iniciar sesión.', false);
+                    setTimeout(() => {
+                        registerModal.style.display = 'none';
+                        clearForm('registerForm');
+                    }, 2000);
+                } else {
+                    showMessage('register-error-message', result.error || 'Error al crear la cuenta');
+                }
+            } catch (error) {
+                showMessage('register-error-message', 'Error de conexión. Intenta nuevamente.');
+            } finally {
+                document.getElementById('registerBtn').disabled = false;
+            }
+        });
+        
+        // Verificar si ya está logueado
+        async function checkAuth() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/me`, {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    // Ya está logueado, redirigir
+                    window.location.href = 'index.html';
+                }
+            } catch (error) {
+                // No está logueado, continuar en login
+            }
+        }
+        
+        // Verificar autenticación al cargar la página
+        checkAuth();
+    </script>
+</body>
+</html>

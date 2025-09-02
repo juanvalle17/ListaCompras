@@ -15,7 +15,19 @@ class Validations {
         CATEGORIA: /^(Alimentos|Hogar|Higiene Personal|Limpieza|Ropa|Electrónicos|Medicamentos|Mascotas|Otros)$/,
         
         // Prioridad: números del 1 al 10
-        PRIORIDAD: /^(10|[1-9])$/
+        PRIORIDAD: /^(10|[1-9])$/,
+        
+        // Usuario: 3-20 caracteres, solo letras, números y guiones bajos
+        USERNAME: /^[a-zA-Z0-9_]{3,20}$/,
+        
+        // Contraseña: 6-50 caracteres
+        PASSWORD: /^.{6,50}$/,
+        
+        // Email: formato de email válido
+        EMAIL: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+        
+        // Nombre completo: 2-100 caracteres, letras y espacios (incluye acentos)
+        NOMBRE_COMPLETO: /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]{2,100}$/
     };
 
     // Mensajes de error para cada validación
@@ -24,7 +36,11 @@ class Validations {
         PRODUCTO_NOMBRE: 'El nombre del producto debe tener entre 2 y 100 caracteres, solo letras, números y espacios',
         CANTIDAD: 'La cantidad debe ser un número entre 1 y 999',
         CATEGORIA: 'Debe seleccionar una categoría válida',
-        PRIORIDAD: 'La prioridad debe ser un número entre 1 y 10'
+        PRIORIDAD: 'La prioridad debe ser un número entre 1 y 10',
+        USERNAME: 'El nombre de usuario debe tener entre 3 y 20 caracteres, solo letras, números y guiones bajos',
+        PASSWORD: 'La contraseña debe tener entre 6 y 50 caracteres',
+        EMAIL: 'Debe ingresar un email válido',
+        NOMBRE_COMPLETO: 'El nombre completo debe tener entre 2 y 100 caracteres, solo letras y espacios'
     };
 
     // Validar nombre de lista
