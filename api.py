@@ -54,7 +54,7 @@ def validate_field(value, pattern_name, field_name):
 # 🔌 Conexión a SQL Server
 conn_str = (
     "DRIVER={ODBC Driver 17 for SQL Server};"
-    "SERVER=LAPTOP-9MUR1HV0\SQLEXPRESS;"  # Cambia por tu servidor
+    "SERVER=localhost\SQLEXPRESS;"  # Cambia por tu servidor
     "DATABASE=ListaCompras;"  # Cambia por tu BD
     'Trusted_Connection=yes;'
 )
@@ -109,6 +109,24 @@ def get_items(lista_id):
         "prioridad": r[4]
     } for r in rows]
     return jsonify(items)
+
+@app.route("/listas/<int:lista_id>", methods=["DELETE"])
+def delete_lista(lista_id):
+    try:
+        cursor = conn.cursor()
+        # Primero eliminar todos los items de la lista
+        cursor.execute("DELETE FROM Items WHERE lista_id = ?", lista_id)
+        # Luego eliminar la lista
+        cursor.execute("DELETE FROM Listas WHERE id = ?", lista_id)
+        
+        if cursor.rowcount == 0:
+            return jsonify({"error": "Lista no encontrada"}), 404
+            
+        conn.commit()
+        return jsonify({"mensaje": f"Lista {lista_id} eliminada correctamente"}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Error al eliminar lista: {str(e)}"}), 500
 
 @app.route("/listas/<int:lista_id>/items", methods=["POST"])
 def add_item(lista_id):

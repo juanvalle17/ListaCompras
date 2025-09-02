@@ -28,6 +28,19 @@ class ApiService {
         }
     }
 
+    static async deleteLista(listaId) {
+        try {
+            const response = await fetch(buildApiUrl(`${API_CONFIG.ENDPOINTS.LISTAS}/${listaId}`), {
+                method: 'DELETE'
+            });
+            if (!response.ok) throw new Error('Error al eliminar lista');
+            return await response.json();
+        } catch (error) {
+            console.error('Error en deleteLista:', error);
+            throw error;
+        }
+    }
+
     static async addItem(listaId, item) {
         try {
             const response = await fetch(buildApiUrl(`${API_CONFIG.ENDPOINTS.LISTAS}/${listaId}/items`), {
@@ -36,10 +49,10 @@ class ApiService {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    nombre: item.name,
-                    cantidad: item.quantity,
-                    categoria: item.category,
-                    prioridad: item.priority
+                    nombre: item.nombre,
+                    cantidad: item.cantidad,
+                    categoria: item.categoria,
+                    prioridad: item.prioridad
                 })
             });
             if (!response.ok) throw new Error('Error al agregar item');

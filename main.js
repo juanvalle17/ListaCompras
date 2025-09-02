@@ -220,18 +220,27 @@ async function createList() {
 }
 
 // Eliminar lista
-function deleteList(id) {
+async function deleteList(id) {
     if (!confirm('¿Estás seguro de que deseas eliminar esta lista?')) {
         return;
     }
 
     const list = shoppingLists.find(list => list.id === id);
-    shoppingLists = shoppingLists.filter(list => list.id !== id);
-    localStorage.setItem('shoppingLists', JSON.stringify(shoppingLists));
     
-    updateListsCount();
-    renderLists();
-    showToast('Lista eliminada', `"${list.name}" se eliminó correctamente`, 'success');
+    try {
+        // Eliminar de la API
+        await ApiService.deleteLista(id);
+        
+        // Recargar las listas desde la API
+        await loadListasFromAPI();
+        
+        updateListsCount();
+        renderLists();
+        showToast('Lista eliminada', `"${list.name}" se eliminó correctamente`, 'success');
+    } catch (error) {
+        console.error('Error al eliminar lista:', error);
+        showToast('Error', 'No se pudo eliminar la lista del servidor', 'error');
+    }
 }
 
 // Actualizar contador de listas
