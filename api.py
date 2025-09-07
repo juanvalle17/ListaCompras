@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, send_from_directory, send_file
 from flask_cors import CORS
 from flask_session import Session
 import pyodbc
@@ -9,13 +9,19 @@ from datetime import datetime
 import os
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True)  # Habilitar CORS para el frontend con credenciales
+
+# Configuración de CORS
+cors_origins = os.environ.get('CORS_ORIGINS', 'http://localhost:5000,http://127.0.0.1:5000,http://localhost:3000,http://127.0.0.1:3000').split(',')
+CORS(app, supports_credentials=True, origins=cors_origins, allow_headers=['Content-Type', 'Authorization'])  # Habilitar CORS para el frontend con credenciales
 
 # Configuración de sesiones
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'tu-clave-secreta-muy-segura-aqui')
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_PERMANENT'] = False
 app.config['SESSION_USE_SIGNER'] = True
+app.config['SESSION_COOKIE_SECURE'] = False  # Para desarrollo local
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 Session(app)
 
 # Patrones RegEx para validaciones del backend
@@ -26,7 +32,6 @@ PATTERNS = {
     'CATEGORIA': re.compile(r'^(Alimentos|Hogar|Higiene Personal|Limpieza|Ropa|Electrónicos|Medicamentos|Mascotas|Otros)$'),
     'PRIORIDAD': re.compile(r'^(10|[1-9])$'),
     'USERNAME': re.compile(r'^[a-zA-Z0-9_]{3,20}$'),
-    'PASSWORD': re.compile(r'^.{6,50}$'),
     'EMAIL': re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'),
     'NOMBRE_COMPLETO': re.compile(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]{2,100}$')
 }
@@ -244,7 +249,7 @@ def get_current_user():
 @require_auth
 def get_listas():
     cursor = conn.cursor()
-    cursor.execute("SELECT id, nombre, fecha_creacion FROM Listas")
+    cursor.execute("SELECT id, nombre, fecha_creacion FROM Listas WHERE user_id = ?", (session['user_id'],))
     rows = cursor.fetchall()
     listas = [{"id": r[0], "nombre": r[1], "fecha_creacion": r[2]} for r in rows]
     return jsonify(listas)
@@ -265,7 +270,7 @@ def create_lista():
     
     try:
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO Listas (nombre) OUTPUT INSERTED.id VALUES (?)", result)
+        cursor.execute("INSERT INTO Listas (nombre, user_id) OUTPUT INSERTED.id VALUES (?, ?)", (result, session['user_id']))
         lista_id = cursor.fetchone()[0]
         conn.commit()
         return jsonify({"id": lista_id, "nombre": result}), 201
@@ -277,19 +282,34 @@ def create_lista():
 @require_auth
 def get_items(lista_id):
     cursor = conn.cursor()
+    
+    # Verificar que la lista pertenece al usuario autenticado
+    cursor.execute("SELECT id FROM Listas WHERE id = ? AND user_id = ?", (lista_id, session['user_id']))
+    if not cursor.fetchone():
+        return jsonify({"error": "Lista no encontrada o no tienes permisos para verla"}), 404
+    
+    # Primero verificar si la columna completed existe, si no, agregarla
+    try:
+        cursor.execute("ALTER TABLE Items ADD completed BIT DEFAULT 0")
+        conn.commit()
+    except:
+        # La columna ya existe, continuar
+        pass
+    
     cursor.execute("""
-        SELECT id, nombre, cantidad, categoria, prioridad 
+        SELECT id, nombre, cantidad, categoria, prioridad, ISNULL(completed, 0) as completed
         FROM Items 
         WHERE lista_id = ?
         ORDER BY prioridad DESC
-    """, lista_id)
+    """, (lista_id,))
     rows = cursor.fetchall()
     items = [{
         "id": r[0], 
         "nombre": r[1], 
         "cantidad": r[2], 
         "categoria": r[3], 
-        "prioridad": r[4]
+        "prioridad": r[4],
+        "completed": bool(r[5])
     } for r in rows]
     return jsonify(items)
 
@@ -298,19 +318,82 @@ def get_items(lista_id):
 def delete_lista(lista_id):
     try:
         cursor = conn.cursor()
-        # Primero eliminar todos los items de la lista
-        cursor.execute("DELETE FROM Items WHERE lista_id = ?", lista_id)
-        # Luego eliminar la lista
-        cursor.execute("DELETE FROM Listas WHERE id = ?", lista_id)
         
-        if cursor.rowcount == 0:
-            return jsonify({"error": "Lista no encontrada"}), 404
-            
+        # Verificar que la lista pertenece al usuario autenticado
+        cursor.execute("SELECT id FROM Listas WHERE id = ? AND user_id = ?", (lista_id, session['user_id']))
+        if not cursor.fetchone():
+            return jsonify({"error": "Lista no encontrada o no tienes permisos para eliminarla"}), 404
+        
+        # Primero eliminar todos los items de la lista
+        cursor.execute("DELETE FROM Items WHERE lista_id = ?", (lista_id,))
+        # Luego eliminar la lista
+        cursor.execute("DELETE FROM Listas WHERE id = ? AND user_id = ?", (lista_id, session['user_id']))
+        
         conn.commit()
         return jsonify({"mensaje": f"Lista {lista_id} eliminada correctamente"}), 200
     except Exception as e:
         conn.rollback()
         return jsonify({"error": f"Error al eliminar lista: {str(e)}"}), 500
+
+@app.route("/listas/<int:lista_id>", methods=["PUT"])
+@require_auth
+def update_lista(lista_id):
+    data = request.json
+    if not data:
+        return jsonify({"error": "Datos JSON requeridos"}), 400
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Verificar que la lista existe y pertenece al usuario autenticado
+        cursor.execute("SELECT id FROM Listas WHERE id = ? AND user_id = ?", (lista_id, session['user_id']))
+        if not cursor.fetchone():
+            return jsonify({"error": "Lista no encontrada o no tienes permisos para editarla"}), 404
+        
+        # Actualizar nombre de la lista si se proporciona
+        if 'nombre' in data:
+            is_valid, result = validate_field(data['nombre'], 'LISTA_NOMBRE', 'nombre')
+            if not is_valid:
+                return jsonify({"error": "Error de validación", "details": [result]}), 400
+            
+            cursor.execute("UPDATE Listas SET nombre = ? WHERE id = ?", (result, lista_id))
+        
+        # Si se proporcionan items, reemplazar todos los items de la lista
+        if 'items' in data:
+            # Eliminar todos los items existentes
+            cursor.execute("DELETE FROM Items WHERE lista_id = ?", (lista_id,))
+            
+            # Agregar los nuevos items
+            for item in data['items']:
+                # Validar cada campo del item
+                is_valid_nombre, nombre_result = validate_field(item.get('nombre', ''), 'PRODUCTO_NOMBRE', 'nombre')
+                if not is_valid_nombre:
+                    return jsonify({"error": "Error de validación en item", "details": [nombre_result]}), 400
+                
+                is_valid_cantidad, cantidad_result = validate_field(item.get('cantidad', 1), 'CANTIDAD', 'cantidad')
+                if not is_valid_cantidad:
+                    return jsonify({"error": "Error de validación en item", "details": [cantidad_result]}), 400
+                
+                is_valid_categoria, categoria_result = validate_field(item.get('categoria', 'Otros'), 'CATEGORIA', 'categoria')
+                if not is_valid_categoria:
+                    return jsonify({"error": "Error de validación en item", "details": [categoria_result]}), 400
+                
+                is_valid_prioridad, prioridad_result = validate_field(item.get('prioridad', 1), 'PRIORIDAD', 'prioridad')
+                if not is_valid_prioridad:
+                    return jsonify({"error": "Error de validación en item", "details": [prioridad_result]}), 400
+                
+                # Insertar el item validado
+                cursor.execute("""
+                    INSERT INTO Items (lista_id, nombre, cantidad, categoria, prioridad) 
+                    VALUES (?, ?, ?, ?, ?)
+                """, (lista_id, nombre_result, cantidad_result, categoria_result, prioridad_result))
+        
+        conn.commit()
+        return jsonify({"mensaje": "Lista actualizada correctamente"}), 200
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Error al actualizar lista: {str(e)}"}), 500
 
 @app.route("/listas/<int:lista_id>/items", methods=["POST"])
 @require_auth
@@ -319,29 +402,35 @@ def add_item(lista_id):
     if not data:
         return jsonify({"error": "Datos JSON requeridos"}), 400
     
-    # Validar todos los campos del item
-    validations = {
-        'nombre': validate_field(data.get("nombre"), 'PRODUCTO_NOMBRE', 'nombre'),
-        'cantidad': validate_field(data.get("cantidad"), 'CANTIDAD', 'cantidad'),
-        'categoria': validate_field(data.get("categoria"), 'CATEGORIA', 'categoria'),
-        'prioridad': validate_field(data.get("prioridad"), 'PRIORIDAD', 'prioridad')
-    }
-    
-    # Verificar si hay errores de validación
-    errors = []
-    validated_data = {}
-    
-    for field, (is_valid, result) in validations.items():
-        if not is_valid:
-            errors.append(result)
-        else:
-            validated_data[field] = result
-    
-    if errors:
-        return jsonify({"error": "Errores de validación", "details": errors}), 400
-    
     try:
         cursor = conn.cursor()
+        
+        # Verificar que la lista pertenece al usuario autenticado
+        cursor.execute("SELECT id FROM Listas WHERE id = ? AND user_id = ?", (lista_id, session['user_id']))
+        if not cursor.fetchone():
+            return jsonify({"error": "Lista no encontrada o no tienes permisos para agregar items"}), 404
+        
+        # Validar todos los campos del item
+        validations = {
+            'nombre': validate_field(data.get("nombre"), 'PRODUCTO_NOMBRE', 'nombre'),
+            'cantidad': validate_field(data.get("cantidad"), 'CANTIDAD', 'cantidad'),
+            'categoria': validate_field(data.get("categoria"), 'CATEGORIA', 'categoria'),
+            'prioridad': validate_field(data.get("prioridad"), 'PRIORIDAD', 'prioridad')
+        }
+        
+        # Verificar si hay errores de validación
+        errors = []
+        validated_data = {}
+        
+        for field, (is_valid, result) in validations.items():
+            if not is_valid:
+                errors.append(result)
+            else:
+                validated_data[field] = result
+        
+        if errors:
+            return jsonify({"error": "Errores de validación", "details": errors}), 400
+        
         cursor.execute("""
             INSERT INTO Items (lista_id, nombre, cantidad, categoria, prioridad)
             VALUES (?, ?, ?, ?, ?)
@@ -352,6 +441,131 @@ def add_item(lista_id):
     except Exception as e:
         conn.rollback()
         return jsonify({"error": f"Error al agregar item: {str(e)}"}), 500
+
+@app.route("/listas/<int:lista_id>/items/<int:item_id>", methods=["PATCH"])
+@require_auth
+def update_item(lista_id, item_id):
+    data = request.json
+    if not data:
+        return jsonify({"error": "Datos JSON requeridos"}), 400
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Verificar que el item existe en la lista
+        cursor.execute("SELECT id FROM Items WHERE id = ? AND lista_id = ?", (item_id, lista_id))
+        if not cursor.fetchone():
+            return jsonify({"error": "Item no encontrado en la lista especificada"}), 404
+        
+        # Construir la consulta de actualización dinámicamente
+        update_fields = []
+        update_values = []
+        
+        if 'completed' in data:
+            # Agregar campo completed a la tabla si no existe
+            try:
+                cursor.execute("ALTER TABLE Items ADD completed BIT DEFAULT 0")
+                conn.commit()
+            except:
+                # La columna ya existe, continuar
+                pass
+            
+            update_fields.append("completed = ?")
+            update_values.append(1 if data['completed'] else 0)
+        
+        if 'nombre' in data:
+            is_valid, result = validate_field(data['nombre'], 'PRODUCTO_NOMBRE', 'nombre')
+            if not is_valid:
+                return jsonify({"error": "Error de validación", "details": [result]}), 400
+            update_fields.append("nombre = ?")
+            update_values.append(result)
+        
+        if 'cantidad' in data:
+            is_valid, result = validate_field(data['cantidad'], 'CANTIDAD', 'cantidad')
+            if not is_valid:
+                return jsonify({"error": "Error de validación", "details": [result]}), 400
+            update_fields.append("cantidad = ?")
+            update_values.append(result)
+        
+        if 'categoria' in data:
+            is_valid, result = validate_field(data['categoria'], 'CATEGORIA', 'categoria')
+            if not is_valid:
+                return jsonify({"error": "Error de validación", "details": [result]}), 400
+            update_fields.append("categoria = ?")
+            update_values.append(result)
+        
+        if 'prioridad' in data:
+            is_valid, result = validate_field(data['prioridad'], 'PRIORIDAD', 'prioridad')
+            if not is_valid:
+                return jsonify({"error": "Error de validación", "details": [result]}), 400
+            update_fields.append("prioridad = ?")
+            update_values.append(result)
+        
+        if not update_fields:
+            return jsonify({"error": "No hay campos para actualizar"}), 400
+        
+        # Ejecutar la actualización
+        update_values.append(item_id)
+        update_values.append(lista_id)
+        query = f"UPDATE Items SET {', '.join(update_fields)} WHERE id = ? AND lista_id = ?"
+        
+        cursor.execute(query, update_values)
+        conn.commit()
+        
+        if cursor.rowcount == 0:
+            return jsonify({"error": "No se pudo actualizar el item"}), 404
+        
+        return jsonify({"mensaje": "Item actualizado correctamente"}), 200
+        
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Error al actualizar item: {str(e)}"}), 500
+
+@app.route("/items/<int:item_id>/status", methods=["PUT"])
+@require_auth
+def update_item_status(item_id):
+    data = request.json
+    if not data or 'completed' not in data:
+        return jsonify({"error": "Campo 'completed' requerido"}), 400
+    
+    completed = bool(data['completed'])
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Verificar que el item existe y pertenece a una lista del usuario autenticado
+        cursor.execute("""
+            SELECT i.id FROM Items i 
+            INNER JOIN Listas l ON i.lista_id = l.id 
+            WHERE i.id = ? AND l.user_id = ?
+        """, (item_id, session['user_id']))
+        if not cursor.fetchone():
+            return jsonify({"error": "Item no encontrado o no tienes permisos para modificarlo"}), 404
+        
+        # Actualizar el estado del item
+        cursor.execute("UPDATE Items SET completed = ? WHERE id = ?", (completed, item_id))
+        conn.commit()
+        
+        return jsonify({"mensaje": "Estado del item actualizado correctamente"}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": f"Error al actualizar item: {str(e)}"}), 500
+
+# Rutas para servir archivos estáticos del frontend
+@app.route('/')
+def index():
+    """Servir la página principal"""
+    return send_file('index.html')
+
+@app.route('/login')
+def login_page():
+    """Servir la página de login"""
+    return send_file('login.html')
+
+@app.route('/<path:filename>')
+def static_files(filename):
+    """Servir archivos estáticos (CSS, JS, etc.)"""
+    return send_from_directory('.', filename)
 
 if __name__ == "__main__":
     app.run(debug=True)

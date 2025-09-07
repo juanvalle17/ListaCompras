@@ -1,9 +1,11 @@
 // Configuración de la API
+const API_BASE_URL = 'http://127.0.0.1:5000';
 const API_CONFIG = {
-    BASE_URL: 'http://localhost:5000',
+    BASE_URL: API_BASE_URL,
     ENDPOINTS: {
         LISTAS: '/listas',
-        ITEMS: '/items'
+        ITEMS: '/items',
+        UPDATE_ITEM: '/listas/{lista_id}/items/{item_id}'
     }
 };
 

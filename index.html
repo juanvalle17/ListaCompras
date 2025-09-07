@@ -104,8 +104,6 @@
                                                min="1" max="10" value="5" step="1" required
                                                title="Prioridad entre 1 (baja) y 10 (alta)">
                                         <div class="priority-display">
-                                            <span>Baja (1)</span>
-                                            <span>Alta (10)</span>
                                         </div>
                                     </div>
                                     <small class="form-help">Desliza para establecer la prioridad</small>
@@ -142,11 +140,19 @@
                 </div>
 
                 <div class="filter-section">
-                    <label>🔍 Filtrar por categoría:</label>
-                    <select id="category-filter" onchange="filterLists()">
-                        <option value="Todos">Todos</option>
-                        <option value="Alimentos">🥬 Alimentos</option>
-                        <option value="Hogar">🏠 Hogar</option>
+                    <div class="search-container">
+                        <label>🔍 Buscar listas:</label>
+                        <input type="text" id="search-input" placeholder="Buscar por nombre de lista o producto..." 
+                               oninput="filterLists()" class="search-input">
+                    </div>
+                    
+                    <div class="filters-row">
+                        <div class="filter-group">
+                            <label>📂 Categoría:</label>
+                            <select id="category-filter" onchange="filterLists()">
+                                <option value="Todos">Todos</option>
+                                <option value="Alimentos">🥬 Alimentos</option>
+                                <option value="Hogar">🏠 Hogar</option>
                         <option value="Higiene Personal">🧴 Higiene Personal</option>
                         <option value="Limpieza">🧽 Limpieza</option>
                         <option value="Ropa">👕 Ropa</option>
@@ -154,7 +160,19 @@
                         <option value="Medicamentos">💊 Medicamentos</option>
                         <option value="Mascotas">🐕 Mascotas</option>
                         <option value="Otros">📦 Otros</option>
-                    </select>
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label>⭐ Prioridad:</label>
+                            <select id="priority-filter" onchange="filterLists()">
+                                <option value="Todas">Todas</option>
+                                <option value="Alta">🔴 Alta</option>
+                                <option value="Media">🟡 Media</option>
+                                <option value="Baja">🟢 Baja</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="lists-container">
@@ -174,10 +192,29 @@
         <div class="toast-message" id="toast-message"></div>
     </div>
 
+    <!-- Modal de confirmación de eliminación -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Confirmar Eliminación</h3>
+                <span class="close" onclick="closeDeleteConfirmation()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas eliminar esta lista de compras?</p>
+                <p><strong>Esta acción no se puede deshacer.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeDeleteConfirmation()">Cancelar</button>
+                <button type="button" class="btn-danger" onclick="confirmDelete()">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
     <script src="config.js"></script>
     <script src="validations.js"></script>
     <script src="api-service.js"></script>
+    <script src="main.js"></script>
     
     <!-- Script de verificación de autenticación -->
     <script>
@@ -190,6 +227,8 @@
                 });
                 
                 if (!response.ok) {
+                    // Marcar autenticación como fallida
+                    window.authenticationFailed = true;
                     // No está autenticado, redirigir al login
                     window.location.href = 'login.html';
                     return false;
@@ -203,7 +242,7 @@
                     const userInfo = document.createElement('div');
                     userInfo.style.fontSize = '0.9rem';
                     userInfo.style.opacity = '0.8';
-                    userInfo.textContent = `Bienvenido, ${userData.nombre_completo}`;
+                    userInfo.textContent = `Bienvenido, ${userData.user.nombre_completo}`;
                     headerTitle.appendChild(userInfo);
                 }
                 
@@ -217,9 +256,13 @@
                     navButtons.appendChild(logoutBtn);
                 }
                 
+                // Marcar autenticación como completa
+                window.authenticationComplete = true;
+                
                 return true;
             } catch (error) {
                 console.error('Error verificando autenticación:', error);
+                window.authenticationFailed = true;
                 window.location.href = 'login.html';
                 return false;
             }
@@ -240,15 +283,7 @@
         }
         
         // Verificar autenticación al cargar la página
-        document.addEventListener('DOMContentLoaded', async () => {
-            const isAuthenticated = await checkAuthentication();
-            if (isAuthenticated) {
-                // Solo cargar main.js si está autenticado
-                const script = document.createElement('script');
-                script.src = 'main.js';
-                document.body.appendChild(script);
-            }
-        });
+        checkAuthentication();
     </script>
 </body>
 </html>
