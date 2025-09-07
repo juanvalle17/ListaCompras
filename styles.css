@@ -4,6 +4,13 @@
     box-sizing: border-box;
 }
 
+html, body {
+    height: auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #f0f9f3 0%, #e8f5e8 100%);
@@ -15,15 +22,18 @@ body {
 .container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 0 2rem;
+    min-height: auto;
+    overflow-y: auto;
 }
 
 /* Header */
 .header {
     background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
     color: white;
-    padding: 2rem 0;
+    padding: 1rem 0;
     box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
+    line-height: 1.2;
 }
 
 .header-content {
@@ -51,6 +61,8 @@ body {
     font-size: 2rem;
     font-weight: 700;
     margin-bottom: 0.5rem;
+    line-height: 1.2;
+    margin: 0;
 }
 
 .header p {
@@ -914,10 +926,14 @@ input:focus, select:focus {
     transition: transform 0.3s ease;
     z-index: 1000;
     max-width: 400px;
+    opacity: 0;
+    visibility: hidden;
 }
 
 .toast.show {
     transform: translateX(0);
+    opacity: 1;
+    visibility: visible;
 }
 
 .toast.success {

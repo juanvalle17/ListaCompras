@@ -632,14 +632,39 @@ function showToast(title, message, type = 'success') {
     const toastTitle = document.getElementById('toast-title');
     const toastMessage = document.getElementById('toast-message');
 
+    if (!toast || !toastTitle || !toastMessage) {
+        console.warn('Toast elements not found');
+        return;
+    }
+
     toastTitle.textContent = title;
     toastMessage.textContent = message;
     
+    // Reset classes and set new type
     toast.className = `toast ${type}`;
+    
+    // Force reflow to ensure the transition works properly
+    toast.offsetHeight;
+    
+    // Add show class for opacity transition
     toast.classList.add('show');
+    
+    // Set visibility and opacity for proper display
+    toast.style.visibility = 'visible';
+    toast.style.opacity = '1';
 
-    setTimeout(() => {
-        toast.classList.remove('show');
+    // Clear any existing timeout
+    if (toast.hideTimeout) {
+        clearTimeout(toast.hideTimeout);
+    }
+
+    // Set new timeout to hide toast
+    toast.hideTimeout = setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            toast.classList.remove('show');
+            toast.style.visibility = 'hidden';
+        }, 300); // Wait for opacity transition to complete
     }, 3000);
 }
 
