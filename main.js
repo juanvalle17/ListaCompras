@@ -440,11 +440,54 @@ function editList(listId) {
                                         `<option value="${cat}" ${cat === item.category ? 'selected' : ''}>${categoryIcons[cat]} ${cat}</option>`
                                     ).join('')}
                                 </select>
+                                <select class="item-priority-input">
+                                    <option value="10" ${item.priority >= 9 ? 'selected' : ''}>Muy Alta (10)</option>
+                                    <option value="8" ${item.priority >= 7 && item.priority <= 8 ? 'selected' : ''}>Alta (7-8)</option>
+                                    <option value="5" ${item.priority >= 4 && item.priority <= 6 ? 'selected' : ''}>Media (4-6)</option>
+                                    <option value="3" ${item.priority >= 2 && item.priority <= 3 ? 'selected' : ''}>Baja (2-3)</option>
+                                    <option value="1" ${item.priority === 1 ? 'selected' : ''}>Muy Baja (1)</option>
+                                </select>
                                 <button class="btn btn-danger btn-sm" onclick="removeEditItem(${index})">
                                     🗑️
                                 </button>
                             </div>
                         `).join('')}
+                    </div>
+                    
+                    <!-- Sección para agregar nuevos items -->
+                    <div class="add-item-section" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+                        <h5 style="margin-bottom: 1rem; color: #374151;">➕ Agregar nuevo item:</h5>
+                        <div class="add-item-form" style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: end;">
+                            <div style="flex: 2; min-width: 150px;">
+                                <label style="font-size: 0.875rem; margin-bottom: 0.25rem;">Nombre:</label>
+                                <input type="text" id="new-item-name" placeholder="Nombre del producto" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+                            </div>
+                            <div style="flex: 1; min-width: 80px;">
+                                <label style="font-size: 0.875rem; margin-bottom: 0.25rem;">Cantidad:</label>
+                                <input type="number" id="new-item-quantity" value="1" min="1" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+                            </div>
+                            <div style="flex: 2; min-width: 120px;">
+                                <label style="font-size: 0.875rem; margin-bottom: 0.25rem;">Categoría:</label>
+                                <select id="new-item-category" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+                                    ${Object.keys(categoryIcons).map(cat => 
+                                        `<option value="${cat}">${categoryIcons[cat]} ${cat}</option>`
+                                    ).join('')}
+                                </select>
+                            </div>
+                            <div style="flex: 1; min-width: 100px;">
+                                <label style="font-size: 0.875rem; margin-bottom: 0.25rem;">Prioridad:</label>
+                                <select id="new-item-priority" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+                                    <option value="10">Muy Alta (10)</option>
+                                    <option value="8">Alta (7-8)</option>
+                                    <option value="5" selected>Media (4-6)</option>
+                                    <option value="3">Baja (2-3)</option>
+                                    <option value="1">Muy Baja (1)</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="addNewItemToEdit()" style="padding: 8px 16px; white-space: nowrap;">
+                                ➕ Agregar
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -475,6 +518,76 @@ function removeEditItem(index) {
     }
 }
 
+// Agregar nuevo item durante la edición
+function addNewItemToEdit() {
+    const nameInput = document.getElementById('new-item-name');
+    const quantityInput = document.getElementById('new-item-quantity');
+    const categorySelect = document.getElementById('new-item-category');
+    const prioritySelect = document.getElementById('new-item-priority');
+    
+    const name = nameInput.value.trim();
+    const quantity = parseInt(quantityInput.value);
+    const category = categorySelect.value;
+    const priority = parseInt(prioritySelect.value);
+    
+    // Validar campos
+    if (!name) {
+        showToast('Error', 'El nombre del producto es requerido', 'error');
+        nameInput.focus();
+        return;
+    }
+    
+    if (quantity < 1) {
+        showToast('Error', 'La cantidad debe ser mayor a 0', 'error');
+        quantityInput.focus();
+        return;
+    }
+    
+    // Obtener el contenedor de items
+    const container = document.getElementById('edit-items-container');
+    
+    // Generar un índice único para el nuevo item (usar timestamp para evitar conflictos)
+    const newIndex = Date.now();
+    
+    // Crear el HTML del nuevo item
+    const newItemHTML = `
+        <div class="edit-item" data-index="${newIndex}" data-is-new="true">
+            <input type="text" value="${name}" class="item-name-input">
+            <input type="number" value="${quantity}" min="1" class="item-quantity-input">
+            <select class="item-category-input">
+                ${Object.keys(categoryIcons).map(cat => 
+                    `<option value="${cat}" ${cat === category ? 'selected' : ''}>${categoryIcons[cat]} ${cat}</option>`
+                ).join('')}
+            </select>
+            <select class="item-priority-input">
+                 <option value="10" ${priority === 10 ? 'selected' : ''}>Muy Alta (10)</option>
+                 <option value="8" ${priority === 8 ? 'selected' : ''}>Alta (7-8)</option>
+                 <option value="5" ${priority === 5 ? 'selected' : ''}>Media (4-6)</option>
+                 <option value="3" ${priority === 3 ? 'selected' : ''}>Baja (2-3)</option>
+                 <option value="1" ${priority === 1 ? 'selected' : ''}>Muy Baja (1)</option>
+             </select>
+            <button class="btn btn-danger btn-sm" onclick="removeEditItem(${newIndex})">
+                🗑️
+            </button>
+        </div>
+    `;
+    
+    // Agregar el nuevo item al contenedor
+    container.insertAdjacentHTML('beforeend', newItemHTML);
+    
+    // Limpiar el formulario
+    nameInput.value = '';
+    quantityInput.value = '1';
+    categorySelect.selectedIndex = 0;
+    prioritySelect.value = 5;
+    
+    // Enfocar el campo de nombre para facilitar agregar más items
+    nameInput.focus();
+    
+    // Mostrar mensaje de éxito
+    showToast('Item agregado', `${name} agregado a la lista`, 'success');
+}
+
 // Guardar lista editada
 async function saveEditedList(listId) {
     // Convertir id a número si es string
@@ -496,15 +609,28 @@ async function saveEditedList(listId) {
         const name = itemEl.querySelector('.item-name-input').value.trim();
         const quantity = parseInt(itemEl.querySelector('.item-quantity-input').value);
         const category = itemEl.querySelector('.item-category-input').value;
+        const prioritySelect = itemEl.querySelector('.item-priority-input');
         
         if (name && quantity > 0) {
             const originalIndex = parseInt(itemEl.dataset.index);
-            const originalItem = list.items[originalIndex];
+            const isNewItem = itemEl.dataset.isNew === 'true';
+            
+            let priority = 5; // Prioridad por defecto (media)
+             
+             if (prioritySelect && prioritySelect.value) {
+                 // Usar la prioridad seleccionada por el usuario
+                 priority = parseInt(prioritySelect.value);
+             } else if (!isNewItem) {
+                 // Es un item existente sin selector de prioridad, mantener la original
+                 const originalItem = list.items[originalIndex];
+                 priority = originalItem ? originalItem.priority || 5 : 5;
+             }
+            
             updatedItems.push({
                 nombre: name,
                 cantidad: quantity,
                 categoria: category,
-                prioridad: originalItem.priority || 1
+                prioridad: priority
             });
         }
     });
@@ -677,6 +803,18 @@ document.addEventListener('keypress', function(e) {
         
         if (itemName.value.trim() && itemCategory.value) {
             addItem();
+        }
+    }
+    
+    // Permitir agregar items con Enter en el modal de edición
+    if (e.key === 'Enter' && e.target.closest('.add-item-form')) {
+        e.preventDefault();
+        const nameInput = document.getElementById('new-item-name');
+        const quantityInput = document.getElementById('new-item-quantity');
+        const categorySelect = document.getElementById('new-item-category');
+        
+        if (nameInput && nameInput.value.trim() && quantityInput && quantityInput.value) {
+            addNewItemToEdit();
         }
     }
 });
